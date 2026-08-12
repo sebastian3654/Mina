@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Für dich ♡</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+
+  /* ============================================================
+     HIER NEUE PINNWAND-NACHRICHTEN EINTRAGEN
+     Schau weiter unten im <script> Teil nach "const notes = [...]"
+     Dort einfach eine neue Zeile { text: "..." } hinzufügen.
+
+     NEUE TAGES-BRIEFE EINTRAGEN
+     Schau nach "const letters = [...]" weiter unten.
+     Dort eine neue Zeile { text: "..." } hinzufügen (Reihenfolge = Tag 1, Tag 2, ...).
+     Das Startdatum für Tag 1 steht in "const letterStart = ...".
+     ============================================================ */
+
+  :root{
+    --cork-1:#a9784f;
+    --cork-2:#8c5f3c;
+    --paper:#fbf3ea;
+    --paper-shadow:#e8d9c4;
+    --plum:#3d2530;
+    --plum-soft:#6b4a55;
+    --rose:#d98a93;
+    --rose-deep:#c06773;
+    --gold:#c9a15a;
+    --tape:#f1e7cf;
+  }
+
+  *{ box-sizing:border-box; }
+
+  html,body{
+    margin:0;
+    padding:0;
+    min-height:100%;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(255,255,255,0.05), transparent 40%),
+      repeating-radial-gradient(circle at 0 0, rgba(0,0,0,0.035) 0, rgba(0,0,0,0.035) 1px, transparent 1px, transparent 100%),
+      linear-gradient(160deg, var(--cork-1), var(--cork-2));
+    background-size: auto, 6px 6px, auto;
+    font-family:'Nunito', sans-serif;
+    color:var(--plum);
+    overflow-x:hidden;
+  }
+
+  /* ambient floating hearts */
+  .petals{
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index:0;
+    overflow:hidden;
+  }
+  .petal{
+    position:absolute;
+    top:-40px;
+    font-size:1.2rem;
+    color:rgba(255,255,255,0.35);
+    animation:fall linear infinite;
+  }
+  @keyframes fall{
+    to{ transform: translateY(115vh) rotate(25deg); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .petal{ animation:none; display:none; }
+  }
+
+  header{
+    position:relative;
+    z-index:1;
+    text-align:center;
+    padding:4.5rem 1.5rem 2rem;
+  }
+
+  header .eyebrow{
+    font-family:'Nunito',sans-serif;
+    font-weight:700;
+    letter-spacing:.3em;
+    text-transform:uppercase;
+    font-size:.7rem;
+    color:rgba(255,255,255,0.75);
+  }
+
+  h1{
+    font-family:'Caveat', cursive;
+    font-weight:700;
+    font-size:clamp(3rem, 9vw, 5.5rem);
+    color:#fff;
+    margin:.2rem 0 .4rem;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.25);
+  }
+
+  header p.sub{
+    color:rgba(255,255,255,0.85);
+    font-size:1rem;
+    max-width:32ch;
+    margin:0 auto;
+    font-weight:600;
+  }
+
+  main{
+    position:relative;
+    z-index:1;
+    max-width:920px;
+    margin:0 auto;
+    padding:1rem 1.5rem 2rem;
+  }
+
+  section.section-block{
+    margin-bottom:3.5rem;
+  }
+
+  .section-heading{
+    text-align:center;
+    margin-bottom:1.6rem;
+  }
+
+  .section-heading h2{
+    font-family:'Caveat', cursive;
+    font-weight:700;
+    font-size:clamp(2.2rem, 6vw, 3.2rem);
+    color:#fff;
+    margin:0 0 .3rem;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.25);
+  }
+
+  .section-heading p{
+    color:rgba(255,255,255,0.85);
+    font-size:.9rem;
+    font-weight:600;
+    margin:0;
+  }
+
+  .countdown{
+    display:inline-block;
+    margin-top:.7rem;
+    background:rgba(255,255,255,0.12);
+    border:1px solid rgba(255,255,255,0.25);
+    padding:.5rem 1.1rem;
+    border-radius:30px;
+    font-size:.8rem;
+    font-weight:700;
+    color:#fff;
+    letter-spacing:.02em;
+  }
+
+  .board{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(230px,1fr));
+    gap:2.8rem 2.2rem;
+    padding:1rem 0;
+    justify-content:center;
+    width:100%;
+  }
+
+  .note-wrap{
+    perspective:1200px;
+    position:relative;
+  }
+
+  .pin{
+    position:absolute;
+    top:-10px;
+    left:50%;
+    transform:translateX(-50%);
+    width:16px;
+    height:16px;
+    border-radius:50%;
+    background: radial-gradient(circle at 35% 30%, #fff5, var(--rose-deep));
+    box-shadow:0 3px 4px rgba(0,0,0,0.4);
+    z-index:3;
+  }
+
+  .note{
+    position:relative;
+    background:var(--paper);
+    border-radius:3px;
+    padding:2rem 1.4rem 2.2rem;
+    min-height:210px;
+    width:100%;
+    box-shadow: 0 10px 18px rgba(0,0,0,0.28), 0 2px 4px rgba(0,0,0,0.15);
+    cursor:pointer;
+    transition: transform .25s ease, box-shadow .25s ease;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+  }
+
+  .note:hover, .note:focus-visible{
+    transform: translateY(-6px) scale(1.03) rotate(0deg) !important;
+    box-shadow: 0 18px 26px rgba(0,0,0,0.32), 0 3px 6px rgba(0,0,0,0.18);
+    outline:none;
+  }
+
+  .note:focus-visible{
+    outline: 3px solid var(--gold);
+    outline-offset:3px;
+  }
+
+  .note-preview{
+    font-family:'Caveat', cursive;
+    font-size:3.4rem;
+    line-height:1;
+    color:var(--rose-deep);
+    font-weight:600;
+    opacity:.65;
+  }
+
+  .note-index{
+    position:absolute;
+    bottom:8px;
+    right:12px;
+    font-family:'Nunito';
+    font-size:.65rem;
+    font-weight:700;
+    letter-spacing:.05em;
+    color:#c9b8a2;
+  }
+
+  /* locked letter styling */
+  .note.locked{
+    cursor:default;
+    background: linear-gradient(160deg, #d8c6ae, #c7b295);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.22), 0 1px 3px rgba(0,0,0,0.12);
+  }
+  .note.locked:hover{
+    transform: none !important;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.22), 0 1px 3px rgba(0,0,0,0.12);
+  }
+  .note.locked .note-preview{
+    color:#8c765a;
+    opacity:.55;
+    font-size:2.4rem;
+  }
+  .note-day-label{
+    position:absolute;
+    top:10px;
+    left:12px;
+    font-family:'Nunito';
+    font-size:.65rem;
+    font-weight:800;
+    letter-spacing:.05em;
+    color:#a98a6a;
+  }
+  .note:not(.locked) .note-day-label{
+    color:#c9a15a;
+  }
+
+  footer{
+    position:relative;
+    z-index:1;
+    text-align:center;
+    padding-bottom:3rem;
+    color:rgba(255,255,255,0.6);
+    font-size:.8rem;
+  }
+
+  /* reading overlay */
+  .overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(35,20,15,0.55);
+    backdrop-filter:blur(3px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:1.5rem;
+    z-index:10;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s ease;
+  }
+  .overlay.open{
+    opacity:1;
+    pointer-events:auto;
+  }
+
+  .letter{
+    position:relative;
+    background:var(--paper);
+    max-width:480px;
+    width:100%;
+    padding:2.6rem 2rem 2.2rem;
+    border-radius:4px;
+    box-shadow:0 25px 60px rgba(0,0,0,0.45);
+    transform: scale(.9) translateY(10px);
+    transition: transform .3s ease;
+    max-height:85vh;
+    overflow-y:auto;
+  }
+  .overlay.open .letter{
+    transform: scale(1) translateY(0);
+  }
+
+  .letter::before{
+    content:"";
+    position:absolute;
+    top:0; left:0; right:0;
+    height:6px;
+    background:var(--rose);
+    border-radius:4px 4px 0 0;
+  }
+
+  .letter p{
+    font-family:'Caveat', cursive;
+    font-size:1.75rem;
+    line-height:1.5;
+    color:var(--plum);
+    margin:.5rem 0 1.8rem;
+    text-align:center;
+    white-space:pre-line;
+  }
+
+  .letter-nav{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:1rem;
+  }
+
+  .letter-nav button{
+    font-family:'Nunito';
+    font-weight:700;
+    font-size:.85rem;
+    background:none;
+    border:2px solid var(--rose);
+    color:var(--rose-deep);
+    padding:.5rem 1rem;
+    border-radius:30px;
+    cursor:pointer;
+    transition:background .2s ease, color .2s ease;
+  }
+  .letter-nav button:hover{
+    background:var(--rose);
+    color:#fff;
+  }
+  .letter-nav button:disabled{
+    opacity:.35;
+    cursor:default;
+    background:none;
+    color:var(--rose-deep);
+  }
+
+  .letter-count{
+    font-size:.75rem;
+    color:var(--plum-soft);
+    font-weight:700;
+    letter-spacing:.05em;
+  }
+
+  .close-btn{
+    position:absolute;
+    top:.6rem;
+    right:.8rem;
+    background:none;
+    border:none;
+    font-size:1.3rem;
+    color:var(--plum-soft);
+    cursor:pointer;
+    line-height:1;
+    padding:.3rem;
+  }
+  .close-btn:hover{ color:var(--rose-deep); }
+
+</style>
+</head>
+<body>
+
+<div class="petals" id="petals"></div>
+
+<header>
+  <div class="eyebrow">für meine Mina</div>
+  <h1>Für Mina ♡</h1>
+  <p class="sub">Alles, was ich dir sagen will &mdash; an einem Ort.</p>
+</header>
+
+<main>
+
+  <section class="section-block">
+    <div class="section-heading">
+      <h2>Deine Briefe</h2>
+      <p id="letterSub">Jeden Tag ein neuer Brief für dich.</p>
+      <div class="countdown" id="countdown"></div>
+    </div>
+    <div class="board" id="letterBoard"></div>
+  </section>
+
+  <section class="section-block">
+    <div class="section-heading">
+      <h2>Kleine Pinnwand</h2>
+      <p id="subCount">Zettel, die ich dir gepinnt habe. Dreh sie um.</p>
+    </div>
+    <div class="board" id="board"></div>
+  </section>
+
+</main>
+
+<footer>gemacht mit ♡ von Sebastian</footer>
+
+<div class="overlay" id="overlay">
+  <div class="letter">
+    <button class="close-btn" id="closeBtn" aria-label="Schließen">✕</button>
+    <p id="letterText"></p>
+    <div class="letter-nav">
+      <button id="prevBtn">← zurück</button>
+      <span class="letter-count" id="letterCount"></span>
+      <button id="nextBtn">weiter →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+  /* ============================================================
+     TAGES-BRIEFE (9 Tage)
+     Neue Zeile { text: "..." } hinzufügen, in Reihenfolge Tag 1 -> Tag 9.
+     letterStart = Datum, an dem Tag 1 freigeschaltet wird (00:00 Uhr).
+     Mehrzeilige Texte einfach mit \n trennen.
+     ============================================================ */
+  const letterStart = new Date("2026-08-07T00:00:00");
+
+  const letters = [
+    { text: "Mina mein Schatz,\nheute fahre ich in den Urlaub und bin leider nicht bei dir um mit dir zu kuscheln, aber nichts desto trotz bin ich in Gedanken immer an deiner Seite und natürlich immer zum schreiben und telefonieren da.\nIch weiß dass es gerade eine schreckliche Zeit ist, die du durchmachst, aber ich will dir mal sagen wie unglaublich stolz ich auf dich bin, dass du nicht aufgibst und es meistern wirst.\nDu bist mir so sehr ans Herz gewachsen und ich habe extrem gemerkt wie es in letzter Zeit nochmal extremer wurde.\nIch kann mir ein Leben ohne dich nicht vorstellen und liebe dich über alles.\nIch habe leider keine 9 handgeschriebenen Briefe, was mir leid tut, aber es ist vielleicht trotzdem etwas.\nWenn du es nicht bereits verstanden hast, habe ich jeden Tag einen neuen „Brief“ für dich den du lesen darfst.\nHeute ist der erste Tag.\nMina lara, mein Mausbär, mein Schatz, mein Baby, meine süße, meine hübsche, mein ein und alles, ich bin so froh, dass wir beide durch dick und dünn gemeinsam gehen und ich liebe dich über alles ❤️\n\nMit liebsten Grüßen,\n\ndein dich extrem vermissender Freund,\nBasi" },
+    { text: "Liebe Mina Maus Bär,\nNun ist der erste Tag vergangen und ich vermisse dich bereits ganz dolle.\nEgal wie schön es sein mag, ohne dich ist es einfach nicht das selbe.\nIch vermisse dich so sehr und wünschte ich könnte dich einfach ganz fest umarmen.\nIch weiß dir gehts sehr schlecht und ich würde dir so gerne helfen aber versuche nichts desto trotz natürlich für dich da zu sein.\nWenn ich an dich denke bin ich immer sofort glücklich: deine hübschen Augen, dein wunderschönes lächeln oder einfach deine hübsche angenehme Stimme.\nAlles an dir ist so perfekt und mit dir ist es einfach magisch.\nIch liebe dich wahrhaftig so unglaublich sehr und das für immer auf Ewigkeit.\nIch freue mich auf die Zeit wenn wir wieder vereint sind und natürlich auf unsere Telefonate zusammen.\nIch liebe dichhh so sehr und bin immer für dich da!!!\n\nMein Schatz ❤️\n\nLiebste Grüße,\n\nDein basi" },
+    { text: "Liebe Mina mein Schatz,\nwir hatten bereits unsere ersten Streitigkeiten und ich weiß es ist nicht einfach.\nFür dich nicht einfach und für mich nicht einfach.\nNichts desto trotz werden wir das schaffen gemeinsam und glücklich sein.\nIch liebe es mit dir zu schreiben und zu merken dass du glücklich bist.\nGerne telefonieren wir heute bitte denn ich vermisse deine Stimme.\nEbenso entschuldige ich mich dass ich auch nicht immer perfekt bin und auch dich verletzt habe.\nIch versuch perfekt wie möglich zu sein aber ich schaffe es leider nicht immer.\nIch hoffe du weißt dass du mir alles bedeutest.\nIch bin so verliebt in dich und du bist wirklich meine ganze Welt und mein ganzer stolz.\nMina lara mein mausbär, ich weiß du hast es nicht leicht.\nUnd du tust mir zum einen extrem leid weil weiß wie hart es ist aber zum anderen bin ich auch so stolz auf dich, weil ich eben weiß wie du dich schlägst obwohl es so hart ist.\nMina ich liebe dich. Ich liebe dich so sehr. Ich liebe wie du bist. Ich liebe alles an dir. Ob äußerlich oder innerlich.\nDu hast ein Herz aus Gold und du kannst wirklich stolz auf dich sein, dafür dass du so ein wunderschönes, wunderbares & wundervolles Mädchen bist.\nMein Mädchen - und darauf bin ich unglaublich stolz.\nMina ich hoffe du magst mich noch denn ich liebe dich ❤️\nIch würde mich freuen wenn wir heute viel schreiben können und telefonieren können\n\nMit aller liebsten Grüßen,\nIch liebe dich so sehr ❤️\n\ndein Basi\n\nPS: Schatz du bist so toll ich liebe dich wirklich" },
+    { text: "Lieber Mausbär,\nheute ist ein schöner Tag.\nWir haben gestern telefoniert ich bin so verliebt in dich und es ist so toll.\nMir fehlen irgendwie die Worte weil ich so fasziniert von dir bin und so glücklich.\nIch hoffe du hast heute einen wunderschönen Tag, so wunderschön, am besten wie du mein Mausbär.\nIch vermisse dich so doll aber das schreiben und telefonieren hilft mega.\nDankeschön\nIch liebe dich so unglaublich sehr\nBis zum Mond und zurück\nDanke für alles\nDu bist meine Welt\n\nMit liebsten Grüßen\n\nBasi" },
+    { text: "Mina Schatz,\nnun bricht der fünfte Tag an und es wird nicht besser.\nIch vermisse dich jeden Tag mehr.\nDu bist so toll und so eine Bereicherung für mich und mein Leben und ich wünschte ich könnte dich überall dabei haben.\nIch liebs mit dir zu telefonieren du bist so süß und so besonders.\nMein schatz du bist alles für mich ❤️\nIch weiß nicht was du heute so machst aber ich wünsche die ganz viel Spaß und einen wundervollen Tag 🤭\nMina mausbär ich liebe dich\nIch liebe dich so sehr\nBis in die Unendlichkeit und noch viel viel weiter\nOder wie du sagen würdest\nTo eternity and waffles\nIch liebe dich einfach\nBleib wie du bist\nSo mausig\nSo hübsch\nSo lieb\nSo klasse\nSo klug\nSo lustig\nSo toll\nSo perfekt\nBitte\nDanke\nIch liebe dich\nSo sehr mein Schatz\nMeine Frau hihi\nLove you ❤️\n\nLiebe Grüße,\n\nBasi" },
+    { text: "" },
+    { text: "" },
+    { text: "" },
+    { text: "" }
+  ];
+
+  const msProTag = 1000 * 60 * 60 * 24;
+
+  function letterDayIndex(){
+    const heute = new Date();
+    return Math.floor((heute - letterStart) / msProTag); // 0 = Tag 1 freigeschaltet
+  }
+
+  function letterUnlocked(i){
+    return letterDayIndex() >= i;
+  }
+
+  const letterBoard = document.getElementById('letterBoard');
+  const letterSub = document.getElementById('letterSub');
+  const countdownEl = document.getElementById('countdown');
+
+  let currentLetter = 0;
+  let unlockedIndices = [];
+
+  function buildLetterBoard(){
+    letterBoard.innerHTML = '';
+    unlockedIndices = [];
+
+    letters.forEach((letter, i) => {
+      const unlocked = letterUnlocked(i);
+      if(unlocked) unlockedIndices.push(i);
+
+      const wrap = document.createElement('div');
+      wrap.className = 'note-wrap';
+
+      const pin = document.createElement('div');
+      pin.className = 'pin';
+      wrap.appendChild(pin);
+
+      const btn = document.createElement('button');
+      btn.className = 'note' + (unlocked ? '' : ' locked');
+      const tilt = ((i % 5) - 2) * 2.2;
+      btn.style.transform = `rotate(${tilt}deg)`;
+
+      const dayLabel = document.createElement('span');
+      dayLabel.className = 'note-day-label';
+      dayLabel.textContent = 'Tag ' + (i+1);
+      btn.appendChild(dayLabel);
+
+      const preview = document.createElement('span');
+      preview.className = 'note-preview';
+      preview.textContent = unlocked ? '✉' : '🔒';
+      btn.appendChild(preview);
+
+      if(unlocked){
+        btn.setAttribute('aria-label', `Brief Tag ${i+1} öffnen`);
+        btn.addEventListener('click', () => openLetter(i));
+      } else {
+        btn.setAttribute('aria-label', `Brief Tag ${i+1} noch verschlossen`);
+        btn.disabled = true;
+      }
+
+      wrap.appendChild(btn);
+      letterBoard.appendChild(wrap);
+    });
+  }
+
+  function updateCountdown(){
+    const dayIdx = letterDayIndex();
+
+    if(dayIdx < 0){
+      letterSub.textContent = 'Bald geht es los.';
+      const diff = letterStart - new Date();
+      countdownEl.textContent = 'Erster Brief in ' + formatDiff(diff);
+      return;
+    }
+
+    if(dayIdx >= letters.length){
+      letterSub.textContent = 'Alle Briefe sind freigeschaltet.';
+      countdownEl.style.display = 'none';
+      return;
+    }
+
+    letterSub.textContent = `Tag ${dayIdx+1} von ${letters.length} ist freigeschaltet.`;
+
+    const nextUnlock = new Date(letterStart.getTime() + (dayIdx+1) * msProTag);
+    const diff = nextUnlock - new Date();
+    countdownEl.textContent = 'Nächster Brief in ' + formatDiff(diff);
+  }
+
+  function formatDiff(ms){
+    if(ms <= 0) return 'gleich';
+    const totalMin = Math.floor(ms / 60000);
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    return h + ' Std ' + m + ' Min';
+  }
+
+  function openLetter(i){
+    currentLetter = i;
+    renderLetter();
+    overlay.classList.add('open');
+  }
+
+  function renderLetter(){
+    letterText.textContent = letters[currentLetter].text;
+    const posInUnlocked = unlockedIndices.indexOf(currentLetter);
+    letterCount.textContent = `Tag ${currentLetter+1} · ${posInUnlocked+1} / ${unlockedIndices.length}`;
+    prevBtn.disabled = posInUnlocked <= 0;
+    nextBtn.disabled = posInUnlocked >= unlockedIndices.length - 1;
+  }
+
+  buildLetterBoard();
+  updateCountdown();
+  setInterval(updateCountdown, 60000);
+
+  /* ============================================================
+     PINNWAND-NACHRICHTEN
+     Neue Notiz = neue Zeile { text: "..." } in der Liste unten.
+     ============================================================ */
+  const notes = [
+    { text: "Ich liebe dich so sehr, Mina." },
+    { text: "Du bist so süß." },
+    { text: "Ich liebe, wie du lachst." },
+    { text: "Dein Lächeln ist wunderschön." },
+    { text: "Du bist so hübsch." },
+    { text: "Deine Ausstrahlung ist so erholsam." },
+    { text: "Du bist das Beste dieser Welt." },
+    { text: "Ich liebe alles an dir." },
+    { text: "Du bist so ein Geschenk." },
+    { text: "Du bist alles, was ein Mann sich wünscht." },
+    { text: "Du bist so goldig." },
+    { text: "Ich liebe dich soooo sehr." },
+    { text: "Du bist meine Maus." },
+    { text: "Mein Mädchen." },
+    { text: "Du bist so attraktiv." },
+    { text: "ICH LIEBE DICH." },
+    { text: "Du hast so tolle Haare." },
+    { text: "Du riechst so unglaublich gut." },
+    { text: "Du bist so hilfsbereit." },
+    { text: "Du bist so einfühlsam." },
+    { text: "Du bist immer für mich da." },
+    { text: "Du bist mein Licht am Ende des Tunnels." },
+    { text: "Winnie Puuh hat mal gesagt: „Wie glücklich bin ich, etwas zu haben, das den Abschied so schwer macht.“ Genau so fühlt es sich mit dir an." },
+    { text: "Du hast so einen hübschen Style, ich liebe es, wie du dich kleidest." },
+    { text: "Deine Figur ist der Wahnsinn." },
+  ];
+
+  document.getElementById('subCount').textContent = `${notes.length} Zettel, die ich dir gepinnt habe. Dreh sie um.`;
+
+  const board = document.getElementById('board');
+  const overlay = document.getElementById('overlay');
+  const letterText = document.getElementById('letterText');
+  const letterCount = document.getElementById('letterCount');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const closeBtn = document.getElementById('closeBtn');
+
+  let current = 0;
+  let pinnedMode = false; // tracks whether overlay currently shows a pinboard note or a letter
+
+  notes.forEach((note, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'note-wrap';
+    wrap.style.position = 'relative';
+
+    const pin = document.createElement('div');
+    pin.className = 'pin';
+    wrap.appendChild(pin);
+
+    const btn = document.createElement('button');
+    btn.className = 'note';
+    const tilt = ((i % 5) - 2) * 2.2;
+    btn.style.transform = `rotate(${tilt}deg)`;
+    btn.setAttribute('aria-label', `Notiz ${i+1} öffnen`);
+
+    const preview = document.createElement('span');
+    preview.className = 'note-preview';
+    preview.textContent = '♡';
+    btn.appendChild(preview);
+
+    const idx = document.createElement('span');
+    idx.className = 'note-index';
+    idx.textContent = String(i+1).padStart(2,'0');
+    btn.appendChild(idx);
+
+    btn.addEventListener('click', () => openPinnedNote(i));
+    wrap.appendChild(btn);
+    board.appendChild(wrap);
+  });
+
+  function openPinnedNote(i){
+    pinnedMode = true;
+    current = i;
+    renderPinned();
+    overlay.classList.add('open');
+  }
+
+  function renderPinned(){
+    letterText.textContent = notes[current].text;
+    letterCount.textContent = `${current+1} / ${notes.length}`;
+    prevBtn.disabled = current === 0;
+    nextBtn.disabled = current === notes.length - 1;
+  }
+
+  function closeLetter(){
+    overlay.classList.remove('open');
+  }
+
+  prevBtn.addEventListener('click', () => {
+    if(pinnedMode){
+      if(current>0){ current--; renderPinned(); }
+    } else {
+      const pos = unlockedIndices.indexOf(currentLetter);
+      if(pos > 0){ currentLetter = unlockedIndices[pos-1]; renderLetter(); }
+    }
+  });
+  nextBtn.addEventListener('click', () => {
+    if(pinnedMode){
+      if(current<notes.length-1){ current++; renderPinned(); }
+    } else {
+      const pos = unlockedIndices.indexOf(currentLetter);
+      if(pos < unlockedIndices.length-1){ currentLetter = unlockedIndices[pos+1]; renderLetter(); }
+    }
+  });
+  closeBtn.addEventListener('click', closeLetter);
+  overlay.addEventListener('click', (e) => { if(e.target === overlay) closeLetter(); });
+  document.addEventListener('keydown', (e) => {
+    if(!overlay.classList.contains('open')) return;
+    if(e.key === 'Escape') closeLetter();
+    if(e.key === 'ArrowRight' && !nextBtn.disabled) nextBtn.click();
+    if(e.key === 'ArrowLeft' && !prevBtn.disabled) prevBtn.click();
+  });
+
+  // overwrite openLetter to set pinnedMode = false (defined earlier before this var existed)
+  const _openLetterOriginal = openLetter;
+  openLetter = function(i){
+    pinnedMode = false;
+    _openLetterOriginal(i);
+  };
+
+  // ambient hearts
+  if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    const petalsEl = document.getElementById('petals');
+    const symbols = ['♡','✦'];
+    for(let i=0;i<14;i++){
+      const p = document.createElement('span');
+      p.className = 'petal';
+      p.textContent = symbols[i % symbols.length];
+      p.style.left = Math.random()*100 + '%';
+      p.style.fontSize = (0.8 + Math.random()*0.9) + 'rem';
+      p.style.animationDuration = (12 + Math.random()*10) + 's';
+      p.style.animationDelay = (Math.random()*10) + 's';
+      petalsEl.appendChild(p);
+    }
+  }
+</script>
+
+</body>
+</html>
